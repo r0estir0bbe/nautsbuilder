@@ -82,23 +82,32 @@ leiminauts.Skill = Backbone.Model.extend({
 			
 			// Handle character specific pills
 			var baseEffects = this.get('baseEffects');
-			var pills = _(baseEffects).findWhere({key: "pills"});			
+			var pills = _(baseEffects).findWhere({key: "pills"});
+			var pillsType = (pills ? pills.value : "turbo"); // default to Power Pills Turbo if not set
+			
 			if (pills) {
 				// Remove pills value from baseEffects
 				var index = _(baseEffects).indexOf(pills);
 				baseEffects.splice(index, 1);
-				
-				// Remove unused pills from upgrades
-				var unwantedPills = {"turbo": "Power Pills Turbo", "light": "Power Pills Light", "companion": "Power Pills Companion"};
-				delete unwantedPills[pills.value];
-				
-				_(unwantedPills).each(function(pillsName) {
-					var pill = upgradesObj.findWhere({ name: pillsName });
-					var index = upgradesObj.indexOf(pill);
-					if (index >= 0)
-						skillUpgrades.splice(index, 1);
-				});
 			}
+			
+			// Find and remove all Power Pills upgrades except pillsType
+			var pillsPrefix = "Power Pills ";
+			var indices = [];
+			upgradesObj.each(function(upgrade, index) {
+				var name = upgrade.name;
+				if (name.indexOf(pillsPrefix) === 0 && name.length > pillsPrefix.length) {
+					var type = name.substr(pillsPrefix.length).toLowerCase();
+					if (type !== pillsType) {
+						indices.push(index);
+					}
+				}
+			});			
+			// Remove elements from back to front to ensure that every index remains valid
+			indices.sort(); indices.reverse();
+			_(indices).each(function(index) {
+				skillUpgrades.splice(index, 1);
+			});
 
 			// Replace unique jump upgrades with common ones
 			var characterJumpUpgrades = _(leiminauts.upgrades).where({ skill: this.get('name') });
