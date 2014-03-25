@@ -47,13 +47,25 @@ leiminauts.Skill = Backbone.Model.extend({
 		var baseEffects = leiminauts.utils.treatEffects(this.get('effects'));
 		
 		if (this.get('type') == "jump") {
-			var solar = _(baseEffects).findWhere({key: "solar"});
-			if (!solar)
-				baseEffects.push({key: "solar", value: 235});
+			var currentSolar = _(baseEffects).findWhere({key: "solar"});
+			var currentSolarPerMin = _(baseEffects).findWhere({key: "solar per min"});
 			
-			var solarPerMin = _(baseEffects).findWhere({key: "solar per min"});
-			if (!solarPerMin)
-				baseEffects.push({key: "solar per min", value: 30});
+			var baseSolar;
+			var baseSolarPerMin;
+			
+			// Get solar values from common skill "Solar"
+			var solarSkill = _(leiminauts.skills).findWhere({ name: "Solar", type: "jump" });
+			if (solarSkill) {
+				var solarEffects = _(leiminauts.utils.treatEffects(solarSkill['effects']));
+				baseSolar = solarEffects.findWhere({key: "solar"});
+				baseSolarPerMin = solarEffects.findWhere({key: "solar per min"});
+			}
+			
+			if (!currentSolar && baseSolar)
+				baseEffects.push(baseSolar);
+			
+			if (!currentSolarPerMin && baseSolarPerMin)
+				baseEffects.push(baseSolarPerMin);
 		}
 		
 		this.set('baseEffects', baseEffects);
