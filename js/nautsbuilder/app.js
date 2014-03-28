@@ -15,6 +15,18 @@ leiminauts.App = Backbone.Router.extend({
 
 		leiminauts.root = window.location.host;
 
+		// Initialize helper array
+		this._intToCharArray = [];
+		for (var i = 0; i < 10 + 2*26; ++i) {
+			if (i < 10) {
+				this._intToCharArray.push(i);
+			} else if (i < 36) {
+				this._intToCharArray.push(i.toString(36));
+			} else {
+				this._intToCharArray.push((i - 26).toString(36).toUpperCase());
+			}
+		}
+
 		if (options.data !== undefined) {
 			this.data = new leiminauts.CharactersData(null, { data: options.data, console: options.console });
 			this.data.on('selected', function(naut) {
@@ -154,13 +166,19 @@ leiminauts.App = Backbone.Router.extend({
 		var character = charView.model;
 		var currentUrl = this.getCurrentUrl();
 		var urlParts = currentUrl.split('/');
-		//TODO:
 		var build = urlParts.length > 1 ? urlParts[1] : null;
 		var order = urlParts.length > 2 && !_(['forum', 'console']).contains(urlParts[2]) ? urlParts[2] : null;
 		if (build === null) {
 			character.reset();
 			return false;
 		}
+		
+		// Decompress build if needed
+		var isCompressed = build.length < 28;
+		if (isCompressed) {
+			build = this._buildDecompress(build);
+		}
+		
 		var currentSkill = null;
 		//we look at the build as a grid: 4 skills + 6 upgrades by skills = 28 items
 		//each line of the grid contains 7 items, the first one being the skill and the others the upgrades
@@ -177,7 +195,15 @@ leiminauts.App = Backbone.Router.extend({
 
 		if (order) {
 			var grid = this._initGrid();
-			var orderPositions = order.split('-');
+			
+			// Decompress order if needed
+			if (isCompressed) {
+				orderPositions = this._orderDecompress(order);
+			}
+			else {
+				orderPositions = order.split('-').map(function(o) { return parseInt(o); });
+			}
+			
 			var count = _(orderPositions).countBy(function(o) { return o; });
 			var doneSteps = {};
 			var items = [];
@@ -217,6 +243,8 @@ leiminauts.App = Backbone.Router.extend({
 				buildUrl += upgrade.get('current_step').get('level');
 			});
 		});
+		buildUrl = this._buildCompress(buildUrl);		
+		
 		if (order && order.length > 0) {
 			order.each(function(item) { //item can be a skill or an upgrade step
 				//get the position on the grid
@@ -232,7 +260,8 @@ leiminauts.App = Backbone.Router.extend({
 						orderUrlParts.push(_(grid).indexOf(upgrade)+1);
 				}
 			});
-			orderUrl = '/' + orderUrlParts.join('-');
+			//orderUrl = '/' + orderUrlParts.join('-');
+			orderUrl = '/' + this._orderCompress(orderUrlParts);
 		}
 
 		var currentUrl = this.getCurrentUrl();
@@ -256,6 +285,92 @@ leiminauts.App = Backbone.Router.extend({
 		//Without any success.
 		//Sadness.
 		return _(window.location.hash.substring(1)).trim('/').replace('ø', 'o'); //no # and trailing slash and no special unicode characters
+	},
+
+	_buildCompress: function(build) {
+		var maxStep = parseInt(_.max(build));
+		var str = maxStep + parseInt(build, maxStep+1).toString(36);
+		
+		console.log('normal: ' + parseInt(build, 5).toString(36).length + ', extra: ' + str.length);
+		
+		return str;
+	},
+	
+	_buildDecompress: function(build) {
+		var maxStep = parseInt(build.charAt(0));
+		return parseInt(build.substr(1), 36).toString(maxStep+1);
+	},
+	
+	_intToString: function(number, base) {
+		if (base <= 36) {
+			return number.toString(base);
+		}
+
+		if (base > 62) {
+			throw new RangeError("radix out of range");
+		}
+
+		var str = [];
+		var u = Math.abs(number);
+		do {
+			var newu = Math.floor(u / base);
+			str.push("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ".charAt(u - newu * base));
+			u = newu;
+		} while (u != 0);
+	
+		if (number < 0) {
+			str.push('-');
+		}
+	
+		return str.reverse().join('');
+	},
+	
+	_parseInt: function(string, base) {
+		if (base <= 36) {
+			return parseInt(string, base);
+		}
+		
+		if (base > 62) {
+			throw new RangeError("radix out of range");
+		}
+	
+		var first = string.charAt('0');
+		var negative = string.charAt('0') == '-';
+		if (negative || string.charAt('0') == '+') {
+			string = string.substr(1);
+		}
+	
+		var d = 0;
+		
+		for (i = 0; i < string.length; i++) {
+			var digit;
+			var c = string.charAt(i);
+			var code = string.charCodeAt(i);
+			if ('0' <= c && c <= '9')
+				digit = code - '0'.charCodeAt();
+			else if ('a' <= c && c <= 'z')
+				digit = code - 'a'.charCodeAt() + 10;
+			else if ('A' <= c && c <= 'Z')
+				digit = code - 'A'.charCodeAt() + 10 + 26;
+			else
+				break;
+				
+			if (digit >= base) //FIXME: why is this check here?
+				break;
+			
+			d = d * base + digit;
+		}
+		
+		return (negative ? -d : d);
+	},
+	
+	_orderCompress: function(order) {
+		return _(order).map(function (o) { return this._intToCharArray[o]; }, this).join('');
+	},
+	
+	_orderDecompress: function(orderStr) {
+		var order = orderStr.split('');
+		return _(order).map(function (o) { return _(this._intToCharArray).indexOf(o); }, this);
 	},
 
 	_initGrid: function() {
