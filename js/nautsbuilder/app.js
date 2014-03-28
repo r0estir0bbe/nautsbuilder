@@ -289,6 +289,8 @@ leiminauts.App = Backbone.Router.extend({
 
 	_buildCompress: function(build) {
 		var maxStep = parseInt(_.max(build));
+		// FIXME: parseInt(build) can exceed MAX_INT!
+		// TODO: use _intToString function
 		var str = maxStep + parseInt(build, maxStep+1).toString(36);
 		
 		console.log('normal: ' + parseInt(build, 5).toString(36).length + ', extra: ' + str.length);
@@ -297,6 +299,7 @@ leiminauts.App = Backbone.Router.extend({
 	},
 	
 	_buildDecompress: function(build) {
+		// TODO: use _parseInt function
 		var maxStep = parseInt(build.charAt(0));
 		return parseInt(build.substr(1), 36).toString(maxStep+1);
 	},
@@ -365,11 +368,13 @@ leiminauts.App = Backbone.Router.extend({
 	},
 	
 	_orderCompress: function(order) {
+		// TODO: use _intToString function
 		return _(order).map(function (o) { return this._intToCharArray[o]; }, this).join('');
 	},
 	
 	_orderDecompress: function(orderStr) {
 		var order = orderStr.split('');
+		// TODO: use _parseInt function
 		return _(order).map(function (o) { return _(this._intToCharArray).indexOf(o); }, this);
 	},
 
