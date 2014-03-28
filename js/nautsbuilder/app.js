@@ -15,18 +15,6 @@ leiminauts.App = Backbone.Router.extend({
 
 		leiminauts.root = window.location.host;
 
-		// Initialize helper array
-		this._intToCharArray = [];
-		for (var i = 0; i < 10 + 2*26; ++i) {
-			if (i < 10) {
-				this._intToCharArray.push(i);
-			} else if (i < 36) {
-				this._intToCharArray.push(i.toString(36));
-			} else {
-				this._intToCharArray.push((i - 26).toString(36).toUpperCase());
-			}
-		}
-
 		if (options.data !== undefined) {
 			this.data = new leiminauts.CharactersData(null, { data: options.data, console: options.console });
 			this.data.on('selected', function(naut) {
@@ -260,7 +248,6 @@ leiminauts.App = Backbone.Router.extend({
 						orderUrlParts.push(_(grid).indexOf(upgrade)+1);
 				}
 			});
-			//orderUrl = '/' + orderUrlParts.join('-');
 			orderUrl = '/' + this._orderCompress(orderUrlParts);
 		}
 
@@ -288,94 +275,31 @@ leiminauts.App = Backbone.Router.extend({
 	},
 
 	_buildCompress: function(build) {
-		var maxStep = parseInt(_.max(build));
-		// FIXME: parseInt(build) can exceed MAX_INT!
-		// TODO: use _intToString function
-		var str = maxStep + parseInt(build, maxStep+1).toString(36);
+		var maxStep = parseInt(_.max(build.split('')));
+		var i = leiminauts.utils.stringToInt(build, maxStep+1, true);
+		var str = maxStep + leiminauts.utils.intToString(i, 62);
 		
-		console.log('normal: ' + parseInt(build, 5).toString(36).length + ', extra: ' + str.length);
+		console.log('normal: ' + leiminauts.utils.intToString(leiminauts.utils.stringToInt(build, 5, true), 62).length + ', extra: ' + str.length);
 		
 		return str;
 	},
 	
 	_buildDecompress: function(build) {
-		// TODO: use _parseInt function
 		var maxStep = parseInt(build.charAt(0));
-		return parseInt(build.substr(1), 36).toString(maxStep+1);
-	},
-	
-	_intToString: function(number, base) {
-		if (base <= 36) {
-			return number.toString(base);
-		}
-
-		if (base > 62) {
-			throw new RangeError("radix out of range");
-		}
-
-		var str = [];
-		var u = Math.abs(number);
-		do {
-			var newu = Math.floor(u / base);
-			str.push("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ".charAt(u - newu * base));
-			u = newu;
-		} while (u != 0);
-	
-		if (number < 0) {
-			str.push('-');
-		}
-	
-		return str.reverse().join('');
-	},
-	
-	_parseInt: function(string, base) {
-		if (base <= 36) {
-			return parseInt(string, base);
-		}
-		
-		if (base > 62) {
-			throw new RangeError("radix out of range");
-		}
-	
-		var first = string.charAt('0');
-		var negative = string.charAt('0') == '-';
-		if (negative || string.charAt('0') == '+') {
-			string = string.substr(1);
-		}
-	
-		var d = 0;
-		
-		for (i = 0; i < string.length; i++) {
-			var digit;
-			var c = string.charAt(i);
-			var code = string.charCodeAt(i);
-			if ('0' <= c && c <= '9')
-				digit = code - '0'.charCodeAt();
-			else if ('a' <= c && c <= 'z')
-				digit = code - 'a'.charCodeAt() + 10;
-			else if ('A' <= c && c <= 'Z')
-				digit = code - 'A'.charCodeAt() + 10 + 26;
-			else
-				break;
-				
-			if (digit >= base) //FIXME: why is this check here?
-				break;
-			
-			d = d * base + digit;
-		}
-		
-		return (negative ? -d : d);
-	},
+		var i = leiminauts.utils.stringToInt(build.substr(1), 62, true);
+		return leiminauts.utils.intToString(i, maxStep+1);
+	}
 	
 	_orderCompress: function(order) {
-		// TODO: use _intToString function
-		return _(order).map(function (o) { return this._intToCharArray[o]; }, this).join('');
+		return _(order).map(function (number) {
+			return leiminauts.utils.intToString(number, 62);
+		}, this).join('');
 	},
 	
 	_orderDecompress: function(orderStr) {
-		var order = orderStr.split('');
-		// TODO: use _parseInt function
-		return _(order).map(function (o) { return _(this._intToCharArray).indexOf(o); }, this);
+		return _(orderStr.split('')).map(function (char) {
+			return leiminauts.utils.stringToInt(char, 62, false);
+		}, this);
 	},
 
 	_initGrid: function() {
