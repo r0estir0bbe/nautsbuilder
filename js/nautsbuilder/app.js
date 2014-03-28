@@ -274,6 +274,8 @@ leiminauts.App = Backbone.Router.extend({
 	},
 
 	_buildCompress: function(build) {
+		// Compress the build number into BigIntegers with the lowest possible base (maxStep+1)
+		// We need BigInteger because the biggest build numbers don't fit into javascript's native Number type
 		var maxStep = parseInt(_.max(build.split('')));
 		var i = leiminauts.utils.stringToInt(build, maxStep+1, true);
 		return maxStep + leiminauts.utils.intToString(i, 62);
