@@ -281,6 +281,7 @@
 		<script src="js/lib/mousetooltip.js"></script>
 		<script src="js/lib/fastclick.js"></script>
 		<script src="js/lib/jquery.sortable.js"></script>
+		<script src="js/lib/biginteger.js"></script>
 		<script src="js/nautsbuilder/utils.js?v=<?php echo $v ?>"></script>
 		<script src="js/nautsbuilder/data/character.js?v=<?php echo $v ?>"></script>
 		<script src="js/nautsbuilder/data/skill.js?v=<?php echo $v ?>"></script>

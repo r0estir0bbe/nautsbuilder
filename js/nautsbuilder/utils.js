@@ -82,5 +82,99 @@ leiminauts.utils = {
 
 	dps: function(damage, speed) {
 		return leiminauts.utils.number( (parseFloat(speed)/60*parseFloat(damage)).toFixed(2) );
+	},
+
+	intToString: function(number, base) {
+		if (!number && (typeof number !== "number" || typeof number !== "object")) {
+			return "";
+		}
+
+		base = (typeof base !== "undefined" ? base : 10);
+		if (base <= 36) {
+			return number.toString(base).toLowerCase();
+		}
+
+		if (base > 62) {
+			throw new RangeError("radix out of range");
+		}
+
+		var str = [];
+
+		var isBigInt = typeof number !== "number";
+		if (isBigInt) {
+			var u = number.abs();
+			do {
+				var newu = u.divide(base);
+				var index = u.subtract(newu.multiply(base)).toJSValue();
+				str.push("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ".charAt(index));
+				u = newu;
+			} while (!u.isZero());
+		}
+		else {
+			var u = Math.abs(number);
+			do {
+				var newu = Math.floor(u / base);
+				var index = u - newu * base;
+				str.push("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ".charAt(index));
+				u = newu;
+			} while (u != 0);
+		}
+
+		var isNegative = isBigInt ? number.isNegative() : number < 0;
+		if (isNegative) {
+			str.push('-');
+		}
+
+		return str.reverse().join('');
+	},
+
+	stringToInt: function(string, base, useBigInt) {
+		base = (typeof base !== "undefined" ? base : 10);
+
+		if (base <= 36) {
+			return useBigInt ? BigInteger.parse(string, base) : parseInt(string, base);
+		}
+
+		if (base > 62) {
+			throw new RangeError("radix out of range");
+		}
+
+		var first = string.charAt('0');
+		var negative = string.charAt('0') == '-';
+		if (negative || string.charAt('0') == '+') {
+			string = string.substr(1);
+		}
+
+		var result = (useBigInt ? BigInteger(0) : 0);
+		for (i = 0; i < string.length; i++) {
+			var digit;
+			var c = string.charAt(i);
+			var code = string.charCodeAt(i);
+			if ('0' <= c && c <= '9')
+				digit = code - '0'.charCodeAt();
+			else if ('a' <= c && c <= 'z')
+				digit = code - 'a'.charCodeAt() + 10;
+			else if ('A' <= c && c <= 'Z')
+				digit = code - 'A'.charCodeAt() + 10 + 26;
+			else
+				break;
+
+			if (digit >= base) //FIXME: why is this check here?
+				break;
+
+			if (useBigInt) {
+				result = result.multiply(base).add(digit);
+			}
+			else {
+				result = result * base + digit;
+			}
+		}
+
+		if (negative) {
+			return (useBigInt ? result.negate() : -result);
+		}
+		else {
+			return result;
+		};
 	}
 };

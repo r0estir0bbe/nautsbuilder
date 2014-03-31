@@ -15,29 +15,6 @@ leiminauts.App = Backbone.Router.extend({
 
 		leiminauts.root = window.location.host;
 
-		this.convArray = [];
-		for(var i = 0; i <= 61; i++) {
-			if(i < 10) {
-				this.convArray.push(i);
-			} else if(i < 36) {
-				this.convArray.push(i.toString(36));
-			} else {
-				this.convArray.push((i - 26).toString(36).toUpperCase();
-			}
-		}
-
-		// Initialize helper array
-		this._intToCharArray = [];
-		for (var i = 0; i < 10 + 2*26; ++i) {
-			if (i < 10) {
-				this._intToCharArray.push(i);
-			} else if (i < 36) {
-				this._intToCharArray.push(i.toString(36));
-			} else {
-				this._intToCharArray.push((i - 26).toString(36).toUpperCase());
-			}
-		}
-
 		if (options.data !== undefined) {
 			this.data = new leiminauts.CharactersData(null, { data: options.data, console: options.console });
 			this.data.on('selected', function(naut) {
@@ -297,22 +274,27 @@ leiminauts.App = Backbone.Router.extend({
 	},
 
 	_buildCompress: function(build) {
-		var maxStep = parseInt(_.max(build));
-		return maxStep + parseInt(build, maxStep+1).toString(36);
+		var maxStep = parseInt(_.max(build.split('')));
+		var i = leiminauts.utils.stringToInt(build, maxStep+1, true);
+		return maxStep + leiminauts.utils.intToString(i, 62);
 	},
 
 	_buildDecompress: function(build) {
 		var maxStep = parseInt(build.charAt(0));
-		return parseInt(build.substr(1), 36).toString(maxStep+1);
+		var i = leiminauts.utils.stringToInt(build.substr(1), 62, true);
+		return leiminauts.utils.intToString(i, maxStep+1);
 	},
-
+	
 	_orderCompress: function(order) {
-		return _(order).map(function (o) { return this._intToCharArray[o]; }, this).join('');
+		return _(order).map(function (number) {
+			return leiminauts.utils.intToString(number, 62);
+		}, this).join('');
 	},
 
 	_orderDecompress: function(orderStr) {
-		var order = orderStr.split('');
-		return _(order).map(function (o) { return _(this._intToCharArray).indexOf(o); }, this);
+		return _(orderStr.split('')).map(function (char) {
+			return leiminauts.utils.stringToInt(char, 62, false);
+		}, this);
 	},
 
 	_initGrid: function() {

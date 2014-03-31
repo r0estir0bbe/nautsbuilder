@@ -20,7 +20,8 @@ module.exports = function(grunt) {
 					'js/lib/tabletop.js',
 					'js/lib/mousetooltip.js',
 					'js/lib/fastclick.js',
-					'js/lib/jquery.sortable.js'
+					'js/lib/jquery.sortable.js',
+					'js/lib/biginteger.js'
 				],
 				dest: 'dist/libs.js'
 			},
