@@ -14,7 +14,7 @@ leiminauts.App = Backbone.Router.extend({
 		leiminauts.ev = _({}).extend(Backbone.Events);
 
 		leiminauts.root = window.location.host;
-		
+
 		this.convArray = [];
 		for(var i = 0; i <= 61; i++) {
 			if(i < 10) {
@@ -23,6 +23,18 @@ leiminauts.App = Backbone.Router.extend({
 				this.convArray.push(i.toString(36));
 			} else {
 				this.convArray.push((i - 26).toString(36).toUpperCase();
+			}
+		}
+
+		// Initialize helper array
+		this._intToCharArray = [];
+		for (var i = 0; i < 10 + 2*26; ++i) {
+			if (i < 10) {
+				this._intToCharArray.push(i);
+			} else if (i < 36) {
+				this._intToCharArray.push(i.toString(36));
+			} else {
+				this._intToCharArray.push((i - 26).toString(36).toUpperCase());
 			}
 		}
 
@@ -165,7 +177,6 @@ leiminauts.App = Backbone.Router.extend({
 		var character = charView.model;
 		var currentUrl = this.getCurrentUrl();
 		var urlParts = currentUrl.split('/');
-		var isCompressed = !!(urlParts.length > 1 && urlParts[1].length !== 28);
 		var build = urlParts.length > 1 ? urlParts[1] : null;
 		var order = urlParts.length > 2 && !_(['forum', 'console']).contains(urlParts[2]) ? urlParts[2] : null;
 
@@ -173,15 +184,13 @@ leiminauts.App = Backbone.Router.extend({
 			character.reset();
 			return false;
 		}
-		if(isCompressed) {
-			if(build != null)
-				build = this._buildDecompress(build);
-			if(order != null)
-				order = this._orderDecompress(order);
-		} else {
-			if(order != null)
-				order = order.split('-');
+
+		// Decompress build if needed
+		var isCompressed = build.length < 28;
+		if (isCompressed) {
+			build = this._buildDecompress(build);
 		}
+
 		var currentSkill = null;
 		//we look at the build as a grid: 4 skills + 6 upgrades by skills = 28 items
 		//each line of the grid contains 7 items, the first one being the skill and the others the upgrades
@@ -196,10 +205,19 @@ leiminauts.App = Backbone.Router.extend({
 
 		if (order) {
 			var grid = this._initGrid();
-			var count = _(order).countBy(function(o) { return o; });
+
+			// Decompress order if needed
+			if (isCompressed) {
+				orderPositions = this._orderDecompress(order);
+			}
+			else {
+				orderPositions = order.split('-').map(function(o) { return parseInt(o); });
+			}
+
+			var count = _(orderPositions).countBy(function(o) { return o; });
 			var doneSteps = {};
 			var items = [];
-			_(order).each(function(gridPos, i) {
+			_(orderPositions).each(function(gridPos, i) {
 				var item = grid[gridPos-1];
 				if (item instanceof leiminauts.Skill)
 					items.push(item);
@@ -236,6 +254,7 @@ leiminauts.App = Backbone.Router.extend({
 			});
 		});
 		buildUrl = this._buildCompress(buildUrl);
+
 		if (order && order.length > 0) {
 			order.each(function(item) { //item can be a skill or an upgrade step
 				//get the position on the grid
@@ -276,33 +295,24 @@ leiminauts.App = Backbone.Router.extend({
 		//Sadness.
 		return _(window.location.hash.substring(1)).trim('/').replace('ø', 'o'); //no # and trailing slash and no special unicode characters
 	},
-	
+
 	_buildCompress: function(build) {
-		return parseInt(build, 2).toString(36);
+		var maxStep = parseInt(_.max(build));
+		return maxStep + parseInt(build, maxStep+1).toString(36);
 	},
-	
+
 	_buildDecompress: function(build) {
-		return parseInt(build, 36).toString(2);
+		var maxStep = parseInt(build.charAt(0));
+		return parseInt(build.substr(1), 36).toString(maxStep+1);
 	},
-	
+
 	_orderCompress: function(order) {
-		var res = [];
-		for(key in order) {
-			if(order.hasOwnProperty(key)) {
-				res.push(this.convArray[order[key]]);
-			}
-		}
-		return res.join('');
+		return _(order).map(function (o) { return this._intToCharArray[o]; }, this).join('');
 	},
-	
+
 	_orderDecompress: function(orderStr) {
-		var order = orderStr.split(''), res = [];
-		for(key in order) {
-			if(order.hasOwnProperty(key)) {
-				res.push(_(this.convArray).indexOf(order[key]));
-			}
-		}
-		return res;
+		var order = orderStr.split('');
+		return _(order).map(function (o) { return _(this._intToCharArray).indexOf(o); }, this);
 	},
 
 	_initGrid: function() {
