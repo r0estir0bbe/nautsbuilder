@@ -154,10 +154,22 @@ leiminauts.App = Backbone.Router.extend({
 		var character = charView.model;
 		var currentUrl = this.getCurrentUrl();
 		var urlParts = currentUrl.split('/');
+		
+		// Check and remove last element if it is either 'forum' or 'console'
+		var lastElement = urlParts[urlParts.length - 1];
+		var isForum = lastElement === 'forum';
+		var isConsole = lastElement === 'console';
+		if (isForum || isConsole) {
+			urlParts.splice(urlParts.length - 1, 1);
+		}
+				
 		var build = urlParts.length > 1 ? urlParts[1] : null;
 		var order = urlParts.length > 2 && !_(['forum', 'console']).contains(urlParts[2]) ? urlParts[2] : null;
 		if (build === null) {
 			character.reset();
+			if (isForum) {
+				charView.order.toggle(); // Disable order view if there is no build
+			}
 			return false;
 		}
 		var currentSkill = null;
